@@ -131,8 +131,8 @@ Warp lane boundaries back onto original image
 
 I consolidated everything above into a single function and used it to generate the video output.	
 
-The final video of the pipeline implementation can be accessed [here]().
-[![Sample Video](./writeup/2F.png)](http://www.youtube.com/watch?v=pC7CRrP74iQ)
+The final video of the pipeline implementation can be accessed [here](https://youtu.be/SBtrVh3V3g8).
+[![Sample Video](./writeup/2F.png)](https://youtu.be/SBtrVh3V3g8)
 
 
 # Discussion
