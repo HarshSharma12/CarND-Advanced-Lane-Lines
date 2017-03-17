@@ -80,7 +80,6 @@ def apply_threshold(image, xgrad_thresh=(20,100), s_thresh=(170,255)):
     return combined_binary
 
 
-
 def get_pixel_in_window(img, x_center, y_center, size):
     """
     returns selected pixels inside a window.
@@ -130,7 +129,7 @@ def add_pixels_given_centres(x_centres, y_centres, x_array, y_array, image, wind
         return x_array.append(x_additional), y_array.append(y_additional)
 
 
-def histogram_pixels(warped_thresholded_image, offset=50, steps=6,
+def histogram_pixels_v2(warped_thresholded_image, offset=50, steps=6,
                      window_radius=200, medianfilt_kernel_size=51,
                      horizontal_offset=50):
     # Initialise arrays
@@ -248,6 +247,143 @@ def histogram_pixels(warped_thresholded_image, offset=50, steps=6,
 
 
 
+def histogram_pixels(warped_thresholded_image, offset=50, steps=6,
+                     window_radius=200, medianfilt_kernel_size=51,
+                     horizontal_offset=50):
+    # Initialise arrays
+    left_x = []
+    left_y = []
+    right_x = []
+    right_y = []
+
+    # Parameters
+    height = warped_thresholded_image.shape[0]
+    offset_height = height - offset
+    width = warped_thresholded_image.shape[1]
+    half_frame = warped_thresholded_image.shape[1] // 2
+    pixels_per_step = offset_height / steps
+
+    for step in range(steps):
+        left_x_window_centres = []
+        right_x_window_centres = []
+        y_window_centres = []
+
+        # Define the window (horizontal slice)
+        window_start_y = height - (step * pixels_per_step) + offset
+        window_end_y = window_start_y - pixels_per_step + offset
+
+        # Take a count of all the pixels at each x-value in the horizontal slice
+        histogram = np.sum(warped_thresholded_image[int(window_end_y):int(window_start_y), int(horizontal_offset):int(width - horizontal_offset)], axis=0)
+        # plt.plot(histogram)
+
+        # Smoothen the histogram
+        histogram_smooth = signal.medfilt(histogram, medianfilt_kernel_size)
+
+        # plt.plot(histogram_smooth)
+
+        # Identify the left and right peaks
+        left_peaks = np.array(signal.find_peaks_cwt(histogram_smooth[:half_frame], np.arange(1, 10)))
+        right_peaks = np.array(signal.find_peaks_cwt(histogram_smooth[half_frame:], np.arange(1, 10)))
+        if len(left_peaks) > 0:
+            left_peak = max(left_peaks)
+            left_x_window_centres.append(left_peak)
+
+        if len(right_peaks) > 0:
+            right_peak = max(right_peaks) + half_frame
+            right_x_window_centres.append(right_peak)
+
+        # Add coordinates to window centres
+
+        if len(left_peaks) > 0 or len(right_peaks) > 0:
+            y_window_centres.append((window_start_y + window_end_y) // 2)
+
+        # Get pixels in the left window
+        for left_x_centre, y_centre in zip(left_x_window_centres, y_window_centres):
+            left_x_additional, left_y_additional = get_pixel_in_window(warped_thresholded_image, left_x_centre,
+                                                                       y_centre, window_radius)
+            # plt.scatter(left_x_additional, left_y_additional)
+            # Add pixels to list
+            left_x.append(left_x_additional)
+            left_y.append(left_y_additional)
+
+        # Get pixels in the right window
+        for right_x_centre, y_centre in zip(right_x_window_centres, y_window_centres):
+            right_x_additional, right_y_additional = get_pixel_in_window(warped_thresholded_image, right_x_centre,
+                                                                         y_centre, window_radius)
+            # plt.scatter(right_x_additional, right_y_additional)
+            # Add pixels to list
+            right_x.append(right_x_additional)
+            right_y.append(right_y_additional)
+
+    if len(right_x) == 0 or len(left_x) == 0:
+        print("Init no peaks for left or right")
+        print("left_x: ", left_x)
+        print("right_x: ", right_x)
+
+        horizontal_offset = 0
+
+        left_x = []
+        left_y = []
+        right_x = []
+        right_y = []
+
+        for step in range(steps):
+            left_x_window_centres = []
+            right_x_window_centres = []
+            y_window_centres = []
+
+            # Define the window (horizontal slice)
+            window_start_y = height - (step * pixels_per_step) + offset
+            window_end_y = window_start_y - pixels_per_step + offset
+
+            # Take a count of all the pixels at each x-value in the horizontal slice
+            histogram = np.sum(warped_thresholded_image[int(window_end_y):int(window_start_y),
+                               int(horizontal_offset):int(width - horizontal_offset)], axis=0)
+            # plt.plot(histogram)
+
+            # Smoothen the histogram
+            histogram_smooth = signal.medfilt(histogram, medianfilt_kernel_size)
+
+            # plt.plot(histogram_smooth)
+
+            # Identify the left and right peaks
+            left_peaks = np.array(signal.find_peaks_cwt(histogram_smooth[:half_frame], np.arange(1, 10)))
+            right_peaks = np.array(signal.find_peaks_cwt(histogram_smooth[half_frame:], np.arange(1, 10)))
+            if len(left_peaks) > 0:
+                left_peak = max(left_peaks)
+                left_x_window_centres.append(left_peak)
+
+            if len(right_peaks) > 0:
+                right_peak = max(right_peaks) + half_frame
+                right_x_window_centres.append(right_peak)
+
+            # Add coordinates to window centres
+
+            if len(left_peaks) > 0 or len(right_peaks) > 0:
+                y_window_centres.append((window_start_y + window_end_y) // 2)
+
+            # Get pixels in the left window
+            for left_x_centre, y_centre in zip(left_x_window_centres, y_window_centres):
+                left_x_additional, left_y_additional = get_pixel_in_window(warped_thresholded_image, left_x_centre,
+                                                                           y_centre, window_radius)
+                # plt.scatter(left_x_additional, left_y_additional)
+                # Add pixels to list
+                left_x.append(left_x_additional)
+                left_y.append(left_y_additional)
+
+            # Get pixels in the right window
+            for right_x_centre, y_centre in zip(right_x_window_centres, y_window_centres):
+                right_x_additional, right_y_additional = get_pixel_in_window(warped_thresholded_image, right_x_centre,
+                                                                             y_centre, window_radius)
+                # plt.scatter(right_x_additional, right_y_additional)
+                # Add pixels to list
+                right_x.append(right_x_additional)
+                right_y.append(right_y_additional)
+
+    return collapse_into_single_arrays(left_x, left_y, right_x, right_y)
+
+
+
 def fit_second_order_poly(indep, dep, return_coeffs=False):
     fit = np.polyfit(indep, dep, 2)
     fitdep = fit[0]*indep**2 + fit[1]*indep + fit[2]
@@ -333,4 +469,5 @@ def draw_poly(img, poly, poly_coeffs, steps, color=[255, 0, 0], thickness=10, da
 
         if dashed == False or i % 2 == 1:
             img = cv2.line(img, end_point, start_point, color, thickness)
+
     return img
